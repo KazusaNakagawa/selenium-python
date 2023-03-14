@@ -1,12 +1,14 @@
-import os
+import json
+from time import sleep
 from dotenv import load_dotenv
 from models.driver import (
-    LoginSite,
-    LoginSite2,
+    Driver,
     YahooBrowser,
 )
 
 load_dotenv()
+
+json_crawl = json.load(open('./conf/crawl.json', 'r'))
 
 
 def yahoo_main():
@@ -27,43 +29,55 @@ def yahoo_main():
         yb.log.logger.info('main end')
 
 
-def login_site_main():
-    url = os.environ['SITE_URL']
-    email = os.environ['LOGIN_EMAIL']
-    password = os.environ['LOGIN_PASSWORD']
-    title = os.environ['ASSERT_TITLE']
+def login_site_main(target_id='id0001'):
+    target_id = json_crawl[0][target_id]
+    site = target_id['site']
+    account = target_id['account']
+    xpath = site['xpath']
 
-    ls = LoginSite(url=url)
+    driver = Driver(url=site['url'], headless=True)
     try:
-        ls.login(email=email, password=password, title=title)
+        driver.assert_title_check(title=site['login_title'])
+        driver.send_key(xpath=xpath['email'], send_key=account['email'])
+        driver.send_key(xpath=xpath['password'], send_key=account['password'])
+        driver.click_bottom(xpath=xpath['loginButton'])
+        sleep(5)
+        driver.assert_title_check(title=site['home_title'])
 
     except Exception as ex:
-        ls.log.logger.error(ex)
-        ls.close()
+        driver.log.logger.error(ex)
+        driver.close()
     finally:
-        ls.close()
-        ls.log.logger.info('main end')
+        driver.close()
+        driver.log.logger.info('main end')
 
 
-def login_site2_main():
-    url = os.environ['SITE_URL2']
-    company = os.environ['LOGIN_COMPANY_ID']
-    email = os.environ['LOGIN_EMAIL2']
-    password = os.environ['LOGIN_PASSWORD2']
-    title = os.environ['LOGIN_TITLE2']
-    home_title = os.environ['HOME_TITLE2']
+def login_site2_main(target_id='id0002'):
+    target_id = json_crawl[0][target_id]
+    site = target_id['site']
+    account = target_id['account']
+    xpath = site['xpath']
 
-    ls2 = LoginSite2(url=url)
+    driver = Driver(url=site['url'], headless=True)
+
     try:
-        ls2.login(company=company, email=email, password=password, login_title=title, home_title=home_title)
+        driver.assert_title_check(title=site['login_title'])
+        driver.send_key(xpath=xpath['company'], send_key=account['company'])
+        driver.send_key(xpath=xpath['email'], send_key=account['email'])
+        driver.send_key(xpath=xpath['password'], send_key=account['password'])
+        driver.click_bottom(xpath=xpath['loginButton'])
+        sleep(5)
+        driver.assert_title_check(title=site['home_title'])
 
     except Exception as ex:
-        ls2.log.logger.error(ex)
-        ls2.close()
+        driver.log.logger.error(ex)
+        driver.close()
     finally:
-        ls2.close()
-        ls2.log.logger.info('main end')
+        driver.close()
+        driver.log.logger.info('main end')
 
 
 if __name__ == '__main__':
-    login_site2_main()
+    # login_site_main()
+    # login_site2_main()
+    yahoo_main()

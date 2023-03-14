@@ -1,0 +1,39 @@
+[
+  {
+    "id0001": {
+      "account": {
+        "email": "xxxyyyy@gmail.com",
+        "password": "xxxx"
+      },
+      "site": {
+        "url": "https://xxxxx",
+        "login_title": "ログイン｜xxxxx",
+        "home_title": "ホーム｜xxxxx",
+        "xpath": {
+          "company": null,
+          "email": "//*[@id=\"email\"]",
+          "password": "//*[@id=\"password\"]",
+          "loginButton": "//*[@id=\"login-form\"]/xxxx/button"
+        }
+      }
+    },
+    "id0002": {
+      "account": {
+        "company": "xxxxx",
+        "email": "zzzzzz@yyyyy.com",
+        "password": "aaabbbccc"
+      },
+      "site": {
+        "url": "https://cccc.ddddd.com",
+        "login_title": "ログイン | ccccc",
+        "home_title": "ホーム | ddddd",
+        "xpath": {
+          "company": "xxxcompany",
+          "email": "//*[@id=\"email\"]",
+          "password": "//*[@id=\"password\"]",
+          "loginButton": "//*[@id=\"login-form\"]/xxxx/button"
+        }
+      }
+    }
+  }
+]

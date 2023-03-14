@@ -1,5 +1,4 @@
 import os
-import sys
 import traceback
 
 from selenium import webdriver
@@ -20,42 +19,46 @@ class NoneElementsError(Exception):
 
 
 class Driver(object):
-
-    def __init__(self, url="https://www.google.co.jp/"):
+    def __init__(self, url="https://www.google.co.jp/", headless=False):
         """Default: Google Chrome
           params:
             url(str): search target url
         """
         self.log = Log(logger_name=_EXEC_FILE_NAME)
         self.log.logger.info('init ...')
+
+        self.headless = headless
+        self.driver = self._set_chrome_option()
+        self.wait = WebDriverWait(self.driver, 10)
+        self.driver.get(url)
+
+        self.log.logger.info({'url': url})
+        self.log.logger.info('init end')
+
+    def _set_chrome_option(self):
+        """ISSUES:
+        Chrome Option
+
+        """
         options = Options()
         options.add_argument('--window-size=640,1024')
 
-        if len(sys.argv) > 1 and sys.argv[1] == '--linux':
+        if self.headless:
             # docker, linux etc
-            options.binary_location = '/usr/bin/google-chrome'
+            # options.binary_location = '/usr/bin/google-chrome'
             options.add_argument('--headless')
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-gpu')
-            options.add_argument('disable-application-cache')
             chrome_service = service.Service(executable_path='/usr/bin/chromedriver')
-            self.driver = webdriver.Chrome(service=chrome_service, options=options)
+            ua = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_2) '
+            ua += 'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36'
+            options.add_argument(f"user-agent={ua}")
+            driver = webdriver.Chrome(service=chrome_service, options=options)
         else:
-            # local Mac M1: 10.0.5481.177（Official Build） （arm64）
             chrome_service = service.Service(executable_path='/usr/local/bin/chromedriver')
-            options.add_argument('--headless')
-            options.add_argument('--no-sandbox')
-            options.add_argument('--disable-gpu')
-            # options.add_argument('disable-application-cache')
-            # options.add_argument('--user-data-dir=/path/to/cache/directory')
-            self.driver = webdriver.Chrome(service=chrome_service, options=options)
-            # self.driver = webdriver.Chrome(options=options)
+            driver = webdriver.Chrome(service=chrome_service, options=options)
 
-        self.wait = WebDriverWait(self.driver, 10)
-        # search url
-        self.driver.get(url)
-        self.log.logger.info({'url': url})
-        self.log.logger.info('init end')
+        return driver
 
     def close(self):
         self.driver.close()
@@ -95,14 +98,34 @@ class Driver(object):
             self.log.logger.error(traceback.format_exc())
             self.close()
 
-    def login(self, *args, **keywords) -> None:
-        pass
-
     def second_over_search_query(self, *args, **keywords) -> None:
         pass
 
     def clear_search_box(self, *args, **keywords) -> None:
         pass
+
+    def send_key(self, xpath, send_key):
+        """tag 要素を当てて入力する
+
+        params:
+          xpath(str)
+          send_key(str)
+
+        """
+        elements = self.wait.until(lambda x: x.find_elements(By.XPATH, xpath))
+        event = {"element": elements[0]}
+        event["element"].send_keys(send_key)
+
+    def click_bottom(self, xpath):
+        """ tag 要素を当てて click """
+        elements = self.wait.until(lambda x: x.find_elements(By.XPATH, xpath))
+        sleep(3)
+        self.driver.execute_script("arguments[0].click();", elements[0])
+
+    def assert_title_check(self, title=None):
+        """ 現在のページのタイトルをチェック """
+        assert self.driver.title == title
+        self.log.logger.info({'msg': f"{title} OK"})
 
 
 class YahooBrowser(Driver):
@@ -130,80 +153,3 @@ class YahooBrowser(Driver):
         self.log.logger.info({f"msg: cleared search box"})
 
         sleep(sleep_)
-
-
-class LoginSite(Driver):
-    def __init__(self, url=None):
-        super().__init__(url=url)
-
-    def login(self, email, password, title, login_title):
-
-        assert self.driver.title == login_title
-        self.log.logger.info({'msg': f"{login_title} OK"})
-
-        elements = self.wait.until(lambda x: x.find_elements(By.XPATH, '//*[@id="email"]'))
-        event = {"element": elements[0]}
-        event["element"].send_keys(email)
-
-        elements = self.wait.until(lambda x: x.find_elements(By.XPATH, '//*[@id="password"]'))
-        event = {"element": elements[0]}
-        event["element"].send_keys(password)
-
-        try:
-            elements = self.wait.until(lambda x: x.find_elements(By.XPATH, '//*[@id="login-form"]/div[3]/button'))
-            # headless mode: login button counter-measure
-            self.driver.execute_script("arguments[0].click();", elements[0])
-            sleep(5)
-
-            # FIXME: 現状 headless mode では動作しない. ログインページのまま
-            # assert self.driver.title == title
-            # self.log.logger.info({'msg': f"{title} OK"})
-            elements = self.wait.until(
-                lambda x: x.find_elements(
-                    By.XPATH,
-                    '//*[@id="main-content"]/div/div/div[2]/form/div[2]/div[1]/div[1]/div[1]'))
-            sleep(5)
-            assert elements[0].text == '年収・給与'
-
-        except Exception as ex:
-            self.log.logger.error({
-                'ex': ex,
-                'trace': traceback.format_exc(),
-                'current_title': self.driver.title,
-            })
-            # Error した時の html ファイルを書き込む
-            with open(f"../log/{self.driver.title}_source.html", 'w', encoding='UTF-8') as f:
-                f.write(self.driver.page_source)
-
-
-class LoginSite2(Driver):
-    def __init__(self, url=None):
-        super().__init__(url=url)
-
-    def login(self, company, email, password, login_title, home_title):
-        assert self.driver.title == login_title
-        self.log.logger.info({'msg': f"{login_title} OK"})
-
-        elements = self.wait.until(
-            lambda x: x.find_elements(By.XPATH, '//*[@id="employee_session_form_office_account_name"]'))
-        event = {"element": elements[0]}
-        event["element"].send_keys(company)
-
-        elements = self.wait.until(
-            lambda x: x.find_elements(By.XPATH, '//*[@id="employee_session_form_account_name_or_email"]'))
-        event = {"element": elements[0]}
-        event["element"].send_keys(email)
-
-        elements = self.wait.until(
-            lambda x: x.find_elements(By.XPATH, '//*[@id="employee_session_form_password"]'))
-        event = {"element": elements[0]}
-        event["element"].send_keys(password)
-
-        elements = self.wait.until(
-            lambda x: x.find_elements(
-                By.XPATH, '/html/body/div[1]/div/div/div/div/form/div[4]/input'))
-        sleep(3)
-        self.driver.execute_script("arguments[0].click();", elements[0])
-
-        assert self.driver.title == home_title
-        self.log.logger.info({'msg': f"{home_title} OK"})

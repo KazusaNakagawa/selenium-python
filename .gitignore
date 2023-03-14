@@ -6,3 +6,5 @@ __pycache__/
 .idea/
 log/
 venv/
+
+src/conf/crawl.json
